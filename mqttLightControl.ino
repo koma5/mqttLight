@@ -32,6 +32,7 @@ void loop()
       if (check)
       {
         client.subscribe("byteli/light/1");
+        check = false;
       }
       
   }
