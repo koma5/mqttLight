@@ -2,7 +2,18 @@
 #include <PubSubClient.h>
 #include <SPI.h>
 
+// EEPROM - keeping state
+#include <EEPROM.h>
+#include "EEPROMAnything.h"
+
 int led = 9;
+
+struct config_led
+{
+    int pin;
+    boolean state;
+} ledConfig;
+
 
 // Update these with values suitable for your network.
 byte mac[]    = {  0x90, 0xA2, 0xDA, 0x60, 0x68, 0x64 };
@@ -33,6 +44,17 @@ PubSubClient client(server, 1883, callback);
 
 void setup()
 {
+  EEPROM_readAnything(0, ledConfig);
+  
+  if(ledConfig.state)
+  {
+    high(ledConfig.pin, false);
+  }
+  else
+  {
+    low(ledConfig.pin, false);
+  }  
+  
   Ethernet.begin(mac, ip);
   pinMode(led, OUTPUT);
 }
@@ -57,7 +79,7 @@ void on(int pin)
 {
   if(digitalRead(pin) == LOW)
   {
-    digitalWrite(pin, HIGH);
+    high(pin, true);
   }
 }
 
@@ -65,7 +87,7 @@ void off(int pin)
 {
   if(digitalRead(pin) == HIGH)
   {
-    digitalWrite(pin, LOW);
+    low(pin, true);
   }
 }
 
@@ -73,12 +95,48 @@ void toggle(int pin)
 {
   if(digitalRead(pin) == LOW)
   {
-    digitalWrite(pin, HIGH);
+    high(pin, true);
   }
   else
   {
-    digitalWrite(pin, LOW);
+    low(pin, true);
   }
 }
+
+void saveState(int pin, boolean state)
+{
+  ledConfig.pin = pin;
+  ledConfig.state = state;
+  EEPROM_writeAnything(0, ledConfig);
+}
+
+void high(int pin, boolean publishState)
+{
+  
+  digitalWrite(pin, HIGH);
+  
+  if(publishState)
+  {
+    client.publish("byteli/light/1/state", "on");
+  }
+   
+   saveState(pin, HIGH);
+   
+}
+
+void low(int pin, boolean publishState)
+{
+  
+  digitalWrite(pin, LOW);
+  
+  if(publishState)
+  {
+    client.publish("byteli/light/1/state", "off");
+  }
+   
+   saveState(pin, LOW);
+   
+}
+
 
 
